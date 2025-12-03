@@ -175,10 +175,26 @@ The app generates configuration profiles with:
 
 ## Troubleshooting
 
-### Profile Installation Fails
+### Profile Installation Fails with CPDomainPlugIn:101 Error
 
-If automatic installation fails:
-1. Check that the profile file was created on Desktop
+**macOS Sequoia Limitation**: On macOS Sequoia (15.0+), web content filter profiles (`com.apple.webcontent-filter`) may require device supervision (MDM enrollment) and cannot be installed manually by users. This is a macOS security restriction.
+
+**If you encounter this error:**
+1. The profile file is generated correctly, but macOS blocks manual installation
+2. Web content filter profiles on Sequoia typically require:
+   - Device supervision via Apple Configurator or MDM
+   - Or deployment through an MDM solution (Jamf, Mosyle, etc.)
+
+**Alternative Solutions:**
+- Use Screen Time restrictions (requires Family Sharing setup)
+- Use a third-party content filtering solution
+- Deploy via MDM if you have access to one
+- Consider using an earlier macOS version if manual profile installation is required
+
+### Profile Installation Fails (Other Errors)
+
+If automatic installation fails with other errors:
+1. Check that the profile file was created on Desktop/Downloads
 2. Double-click `SchoolWhitelist.mobileconfig`
 3. Follow the prompts in System Settings
 4. Enter admin password when requested
