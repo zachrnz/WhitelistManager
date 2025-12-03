@@ -55,7 +55,9 @@ class ProfileInstaller {
     
     /// Removes the existing profile if it's installed
     private static func removeExistingProfile(completion: @escaping (Bool) -> Void) {
-        removeProfile(completion: completion)
+        removeProfile { success, error in
+            completion(success)
+        }
     }
     
     /// Public method to remove the profile (for testing/undoing)
