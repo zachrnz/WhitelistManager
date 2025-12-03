@@ -13,6 +13,7 @@ import OSLog
 /// Handles privileged operations for installing and removing configuration profiles
 class ProfileInstaller {
     static let profileIdentifier = ProfileGenerator.profileIdentifier
+    private static let logger = Logger(subsystem: "com.arendsee.WhitelistManager", category: "ProfileInstaller")
     
     /// Installs a configuration profile using admin privileges
     /// - Parameters:
@@ -57,15 +58,18 @@ class ProfileInstaller {
         
         executePrivilegedCommand(command: command, arguments: arguments) { success, output, error in
             if success {
-                print("Profile installed successfully via profiles command")
-                print("Output: \(output ?? "none")")
+                logger.info("Profile installed successfully via profiles command")
+                logger.debug("Command output: \(output ?? "none")")
                 completion(true, nil)
             } else {
                 let errorMsg = error ?? "Failed to install profile"
-                print("Direct installation failed: \(errorMsg)")
-                print("Output: \(output ?? "none")")
-                // Include output in error message for debugging
-                let fullError = output != nil && !output!.isEmpty ? "\(errorMsg)\nOutput: \(output!)" : errorMsg
+                logger.error("Direct installation failed: \(errorMsg)")
+                logger.debug("Command output: \(output ?? "none")")
+                // Include full error details for debugging
+                var fullError = errorMsg
+                if let output = output, !output.isEmpty {
+                    fullError += "\n\nCommand output: \(output)"
+                }
                 completion(false, fullError)
             }
         }
@@ -140,10 +144,8 @@ class ProfileInstaller {
         do shell script \(commandString) with administrator privileges
         """
         
-        print("Executing AppleScript command:")
-        print("Command: \(command)")
-        print("Arguments: \(arguments)")
-        print("Script: \(script)")
+        logger.info("Executing AppleScript command: \(command) \(arguments.joined(separator: " "))")
+        logger.debug("Full script: \(script)")
         
         // Execute AppleScript - this will prompt for admin credentials
         if let appleScript = NSAppleScript(source: script) {
@@ -152,25 +154,33 @@ class ProfileInstaller {
             
             if error == nil {
                 let output = result.stringValue ?? ""
-                print("AppleScript execution succeeded")
+                logger.info("AppleScript execution succeeded")
                 completion(true, output.isEmpty ? nil : output, nil)
             } else {
                 let errorCode = error?[NSAppleScript.errorNumber] as? Int ?? -1
                 let errorMsg = error?[NSAppleScript.errorMessage] as? String ?? "Unknown error"
+                let errorBrief = error?[NSAppleScript.errorBriefMessage] as? String
                 
-                print("AppleScript error \(errorCode): \(errorMsg)")
-                print("Full error dictionary: \(error ?? [:])")
+                logger.error("AppleScript error \(errorCode): \(errorMsg)")
+                logger.debug("Full error dictionary: \(String(describing: error))")
                 
                 // Error -128 means user cancelled the authentication dialog
                 if errorCode == -128 {
                     completion(false, nil, "Authentication cancelled by user")
                 } else {
-                    completion(false, nil, "Failed to execute with admin privileges: \(errorMsg)")
+                    // Include error code and brief message if available
+                    var detailedError = "Failed to execute with admin privileges"
+                    detailedError += "\nError code: \(errorCode)"
+                    detailedError += "\nError: \(errorMsg)"
+                    if let brief = errorBrief {
+                        detailedError += "\nBrief: \(brief)"
+                    }
+                    completion(false, nil, detailedError)
                 }
             }
         } else {
-            print("Failed to create AppleScript from source")
-            completion(false, nil, "Failed to create AppleScript")
+            logger.error("Failed to create AppleScript from source")
+            completion(false, nil, "Failed to create AppleScript - invalid script syntax")
         }
     }
     
