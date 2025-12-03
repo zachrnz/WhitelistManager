@@ -108,22 +108,27 @@ class ProfileInstaller {
         arguments: [String],
         completion: @escaping (Bool, String?, String?) -> Void
     ) {
-        // Build command with proper quoting for AppleScript
-        // Escape each argument properly - need to escape for AppleScript string
+        // Use AppleScript's "quoted form of" for proper path handling
+        // This is the recommended way to handle paths with spaces/special characters
+        let escapedCommand = command.replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        
         let escapedArgs = arguments.map { arg -> String in
-            // Escape backslashes first, then quotes
             let escaped = arg.replacingOccurrences(of: "\\", with: "\\\\")
                 .replacingOccurrences(of: "\"", with: "\\\"")
-                .replacingOccurrences(of: "$", with: "\\$")
-            return "\"\(escaped)\""
+            return "quoted form of \"\(escaped)\""
         }
-        let fullCommand = command + " " + escapedArgs.joined(separator: " ")
         
-        // Use AppleScript with admin privileges - this will prompt for admin password
-        // The AppleEvents entitlement allows us to execute AppleScript
+        // Build AppleScript command using quoted form of for each argument
+        let argsString = escapedArgs.joined(separator: " & \" \" & ")
         let script = """
-        do shell script "\(fullCommand)" with administrator privileges
+        do shell script quoted form of "\(escapedCommand)" & " " & \(argsString) with administrator privileges
         """
+        
+        print("Executing AppleScript command:")
+        print("Command: \(command)")
+        print("Arguments: \(arguments)")
+        print("Script: \(script)")
         
         // Execute AppleScript - this will prompt for admin credentials
         if let appleScript = NSAppleScript(source: script) {
@@ -139,6 +144,7 @@ class ProfileInstaller {
                 let errorMsg = error?[NSAppleScript.errorMessage] as? String ?? "Unknown error"
                 
                 print("AppleScript error \(errorCode): \(errorMsg)")
+                print("Full error dictionary: \(error ?? [:])")
                 
                 // Error -128 means user cancelled the authentication dialog
                 if errorCode == -128 {
@@ -148,6 +154,7 @@ class ProfileInstaller {
                 }
             }
         } else {
+            print("Failed to create AppleScript from source")
             completion(false, nil, "Failed to create AppleScript")
         }
     }
