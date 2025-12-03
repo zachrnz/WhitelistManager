@@ -98,28 +98,20 @@ class ProfileInstaller {
         // Open the profile file first (this triggers macOS to show the profile)
         NSWorkspace.shared.open(fileURL)
         
-        // Wait a moment for the file to be processed, then open System Settings
+        // Try to open System Settings directly to Device Management/Profiles section
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            // On macOS Ventura+, Profiles are under General > Device Management
-            // Try using shell command to open System Settings to Device Management
-            let process = Process()
-            process.launchPath = "/usr/bin/open"
-            // Try the General pane with Device Management anchor
-            process.arguments = ["x-apple.systempreferences:com.apple.preference.general?DeviceManagement"]
-            
-            do {
-                try process.run()
-                process.waitUntilExit()
-                if process.terminationStatus != 0 {
-                    // Fallback: try opening System Settings app directly
-                    self.logger.debug("URL scheme failed, opening System Settings app directly")
+            // Try the configuration profiles URL scheme
+            if let profilesURL = URL(string: "x-apple.systempreferences:com.apple.preferences.configurationprofiles") {
+                let opened = NSWorkspace.shared.open(profilesURL)
+                if !opened {
+                    // Fallback: just open System Settings app
+                    logger.debug("URL scheme failed, opening System Settings app directly")
                     if let settingsAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.SystemSettings") {
                         NSWorkspace.shared.open(settingsAppURL)
                     }
                 }
-            } catch {
+            } else {
                 // Fallback: just open System Settings app
-                self.logger.debug("Failed to use shell command, opening System Settings app directly")
                 if let settingsAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.SystemSettings") {
                     NSWorkspace.shared.open(settingsAppURL)
                 }

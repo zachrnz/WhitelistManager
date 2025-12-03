@@ -18,13 +18,21 @@ class ProfileGenerator {
     /// - Returns: Data representation of the .mobileconfig file, or nil on error
     static func generateProfile(allowedURLs: [String]) -> Data? {
         // Create the payload dictionary
-        // Format URLs properly - they should include protocol
+        // PermittedURLs should be domain names without protocol
+        // Remove protocol if present
         let permittedURLs = allowedURLs.map { url -> String in
-            if url.hasPrefix("http://") || url.hasPrefix("https://") {
-                return url
+            var cleanURL = url
+            // Remove protocol if present
+            if cleanURL.hasPrefix("https://") {
+                cleanURL = String(cleanURL.dropFirst(8))
+            } else if cleanURL.hasPrefix("http://") {
+                cleanURL = String(cleanURL.dropFirst(7))
             }
-            // Default to https for security
-            return "https://\(url)"
+            // Remove trailing slash
+            if cleanURL.hasSuffix("/") {
+                cleanURL = String(cleanURL.dropLast())
+            }
+            return cleanURL
         }
         
         let payloadContent: [String: Any] = [
@@ -49,6 +57,7 @@ class ProfileGenerator {
             "PayloadDisplayName": profileDisplayName,
             "PayloadDescription": "Safari web content filter restricting access to school-approved websites",
             "PayloadOrganization": profileOrganization,
+            "PayloadRemovalDisallowed": false, // Allow profile to be removed
             "PayloadContent": [payloadContent]
         ]
         
