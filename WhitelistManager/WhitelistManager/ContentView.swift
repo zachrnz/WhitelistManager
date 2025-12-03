@@ -316,14 +316,14 @@ struct ContentView: View {
                     // User just needs to click "Install" and enter admin password
                     showAlert(
                         title: "Profile Ready",
-                        message: "System Settings should have opened automatically.\n\nClick 'Install' in the Profiles section and enter your admin password to complete the installation.\n\nThe profile file has been saved to your \(saveLocation) if you need to install it later."
+                        message: "System Settings should have opened automatically to General > Device Management.\n\nClick 'Install' next to the profile and enter your admin password to complete the installation.\n\nThe profile file has been saved to your \(saveLocation) if you need to install it later."
                     )
                 } else {
                     // Installation failed - show where file was saved
                     let errorMsg = error ?? "Failed to open profile"
                     showAlert(
                         title: "Installation Requires Manual Step",
-                        message: "\(errorMsg)\n\nThe profile has been saved to your \(saveLocation). Please double-click the file to open System Settings, or go to System Settings > Privacy & Security > Profiles to install it."
+                        message: "\(errorMsg)\n\nThe profile has been saved to your \(saveLocation). Please double-click the file to open System Settings, or go to System Settings > General > Device Management to install it."
                     )
                 }
             }

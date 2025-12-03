@@ -100,11 +100,12 @@ class ProfileInstaller {
         
         // Wait a moment for the file to be processed, then open System Settings
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            // Try using shell command to open System Settings with URL scheme
-            // This sometimes works better than NSWorkspace for URL schemes
+            // On macOS Ventura+, Profiles are under General > Device Management
+            // Try using shell command to open System Settings to Device Management
             let process = Process()
             process.launchPath = "/usr/bin/open"
-            process.arguments = ["x-apple.systempreferences:com.apple.preference.security?Privacy_Profiles"]
+            // Try the General pane with Device Management anchor
+            process.arguments = ["x-apple.systempreferences:com.apple.preference.general?DeviceManagement"]
             
             do {
                 try process.run()
@@ -126,7 +127,7 @@ class ProfileInstaller {
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            completion(true, "System Settings should have opened. Click 'Install' in the Profiles section.")
+            completion(true, "System Settings should have opened to General > Device Management. Click 'Install' next to the profile.")
         }
     }
     
