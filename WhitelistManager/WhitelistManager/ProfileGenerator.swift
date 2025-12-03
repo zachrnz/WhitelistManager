@@ -17,12 +17,19 @@ class ProfileGenerator {
     /// - Parameter allowedURLs: Array of domain names (e.g., ["google.com", "khanacademy.org"])
     /// - Returns: Data representation of the .mobileconfig file, or nil on error
     static func generateProfile(allowedURLs: [String]) -> Data? {
+        // Validate we have at least one URL
+        guard !allowedURLs.isEmpty else {
+            return nil
+        }
+        
         // Create the payload dictionary
-        // PermittedURLs should be domain names without protocol
-        // Remove protocol if present
-        let permittedURLs = allowedURLs.map { url -> String in
-            var cleanURL = url
-            // Remove protocol if present
+        // PermittedURLs should be full URLs with protocol
+        // Ensure URLs have https:// protocol
+        let permittedURLs = allowedURLs.compactMap { url -> String? in
+            var cleanURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !cleanURL.isEmpty else { return nil }
+            
+            // Remove protocol if present (we'll add https://)
             if cleanURL.hasPrefix("https://") {
                 cleanURL = String(cleanURL.dropFirst(8))
             } else if cleanURL.hasPrefix("http://") {
@@ -32,7 +39,13 @@ class ProfileGenerator {
             if cleanURL.hasSuffix("/") {
                 cleanURL = String(cleanURL.dropLast())
             }
-            return cleanURL
+            // Add https:// protocol
+            return "https://\(cleanURL)"
+        }
+        
+        // Ensure we still have URLs after cleaning
+        guard !permittedURLs.isEmpty else {
+            return nil
         }
         
         let payloadContent: [String: Any] = [

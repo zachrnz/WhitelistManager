@@ -316,7 +316,7 @@ struct ContentView: View {
                     // User just needs to click "Install" and enter admin password
                     showAlert(
                         title: "Profile Ready",
-                        message: "System Settings should have opened automatically to General > Device Management.\n\nClick 'Install' next to the profile and enter your admin password to complete the installation.\n\nThe profile file has been saved to your \(saveLocation) if you need to install it later."
+                        message: "System Settings should have opened automatically to General > Device Management.\n\nIf you see an existing profile, remove it first, then click 'Install' next to the new profile and enter your admin password.\n\nThe profile file has been saved to your \(saveLocation) if you need to install it later."
                     )
                 } else {
                     // Installation failed - show where file was saved
