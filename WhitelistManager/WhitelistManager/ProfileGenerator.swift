@@ -24,6 +24,7 @@ class ProfileGenerator {
         
         // Create the payload dictionary
         // PermittedURLs should be domain names only (no protocol) on macOS Sequoia
+        // Format: "example.com" or "*.example.com" for wildcards
         let permittedURLs = allowedURLs.compactMap { url -> String? in
             var cleanURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !cleanURL.isEmpty else { return nil }
@@ -34,8 +35,8 @@ class ProfileGenerator {
             } else if cleanURL.hasPrefix("http://") {
                 cleanURL = String(cleanURL.dropFirst(7))
             }
-            // Remove www. prefix if present
-            if cleanURL.hasPrefix("www.") {
+            // Remove www. prefix if present (unless it's part of a wildcard)
+            if cleanURL.hasPrefix("www.") && !cleanURL.hasPrefix("*") {
                 cleanURL = String(cleanURL.dropFirst(4))
             }
             // Remove trailing slash
@@ -46,8 +47,16 @@ class ProfileGenerator {
             if let slashIndex = cleanURL.firstIndex(of: "/") {
                 cleanURL = String(cleanURL[..<slashIndex])
             }
-            // Return just the domain name
-            return cleanURL.lowercased()
+            
+            // Basic domain validation - must contain at least one dot (for TLD)
+            // or be a wildcard pattern
+            let domain = cleanURL.lowercased()
+            if domain.contains(".") || domain.hasPrefix("*") {
+                return domain
+            } else {
+                // Invalid domain format, skip it
+                return nil
+            }
         }
         
         // Ensure we still have URLs after cleaning
