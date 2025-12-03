@@ -14,29 +14,16 @@ import OSLog
 class ProfileInstaller {
     static let profileIdentifier = ProfileGenerator.profileIdentifier
     
-    /// Installs a configuration profile using Authorization Services
+    /// Installs a configuration profile
+    /// Note: Sandboxed apps cannot request admin privileges programmatically.
+    /// This opens the profile file, which macOS will handle via System Settings.
     /// - Parameters:
     ///   - profilePath: Path to the .mobileconfig file
     ///   - completion: Callback with success status and optional error message
     static func installProfile(at profilePath: String, completion: @escaping (Bool, String?) -> Void) {
-        // First, try to remove the old profile if it exists
-        removeExistingProfile { removed in
-            if removed {
-                print("Removed existing profile")
-            }
-            
-            // Attempt direct installation using profiles command
-            self.installProfileDirectly(at: profilePath) { success, error in
-                if success {
-                    completion(true, nil)
-                } else {
-                    // Fallback: open the file and let macOS handle installation
-                    self.installProfileViaGUI(at: profilePath) { guiSuccess, guiError in
-                        completion(guiSuccess, guiError)
-                    }
-                }
-            }
-        }
+        // Sandboxed apps cannot request admin privileges, so we use GUI installation
+        // macOS will automatically open System Settings when the .mobileconfig file is opened
+        installProfileViaGUI(at: profilePath, completion: completion)
     }
     
     /// Attempts direct installation using the profiles command with admin privileges
