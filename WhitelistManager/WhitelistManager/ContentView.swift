@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var alertMessage = ""
     @State private var alertTitle = ""
     @State private var isUpdating = false
+    @State private var selectedURLs: Set<Int> = []
     
     var body: some View {
         VStack(spacing: 20) {
@@ -36,18 +37,25 @@ struct ContentView: View {
             Divider()
             
             // URL Input Section
-            HStack {
-                TextField("Enter domain (e.g., google.com)", text: $newURL)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit {
-                        addURL()
+            VStack(spacing: 8) {
+                HStack {
+                    TextField("Enter domain or paste multiple URLs", text: $newURL, axis: .vertical)
+                        .textFieldStyle(.roundedBorder)
+                        .lineLimit(3...10)
+                        .onSubmit {
+                            addURLs()
+                        }
+                    
+                    Button(action: addURLs) {
+                        Label("Add", systemImage: "plus.circle.fill")
                     }
-                
-                Button(action: addURL) {
-                    Label("Add", systemImage: "plus.circle.fill")
+                    .buttonStyle(.borderedProminent)
+                    .disabled(newURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isUpdating)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(newURL.isEmpty || isUpdating)
+                
+                Text("Tip: Paste multiple URLs separated by commas, newlines, or spaces")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             .padding(.horizontal)
             
@@ -57,6 +65,29 @@ struct ContentView: View {
                     Text("Allowed URLs (\(whitelistManager.allowedURLs.count))")
                         .font(.headline)
                     Spacer()
+                    
+                    if !selectedURLs.isEmpty {
+                        Button(action: selectAll) {
+                            Text("Select All")
+                        }
+                        .buttonStyle(.borderless)
+                        
+                        Button(action: deselectAll) {
+                            Text("Deselect")
+                        }
+                        .buttonStyle(.borderless)
+                        
+                        Button(action: deleteSelected) {
+                            Label("Delete Selected (\(selectedURLs.count))", systemImage: "trash")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                    } else if !whitelistManager.allowedURLs.isEmpty {
+                        Button(action: selectAll) {
+                            Text("Select All")
+                        }
+                        .buttonStyle(.borderless)
+                    }
                 }
                 .padding(.horizontal)
                 
@@ -74,9 +105,14 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 40)
                 } else {
-                    List {
+                    List(selection: $selectedURLs) {
                         ForEach(Array(whitelistManager.allowedURLs.enumerated()), id: \.offset) { index, url in
                             HStack {
+                                Image(systemName: selectedURLs.contains(index) ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(selectedURLs.contains(index) ? .blue : .secondary)
+                                    .onTapGesture {
+                                        toggleSelection(index)
+                                    }
                                 Image(systemName: "globe")
                                     .foregroundColor(.blue)
                                 Text(url)
@@ -92,10 +128,18 @@ struct ContentView: View {
                                 .disabled(isUpdating)
                             }
                             .padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                            .tag(index)
                         }
                     }
                     .listStyle(.inset)
                     .frame(minHeight: 200)
+                    .onChange(of: whitelistManager.allowedURLs.count) { oldCount, newCount in
+                        // Adjust selected indices when URLs are added/removed
+                        if newCount < oldCount {
+                            selectedURLs = selectedURLs.filter { $0 < newCount }
+                        }
+                    }
                 }
             }
             
@@ -129,15 +173,45 @@ struct ContentView: View {
         }
     }
     
-    private func addURL() {
-        guard !newURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+    private func addURLs() {
+        let inputText = newURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !inputText.isEmpty else {
             return
         }
         
-        if whitelistManager.addURL(newURL) {
+        // Check if it looks like multiple URLs (contains common separators)
+        let hasMultipleURLs = inputText.contains(",") || 
+                              inputText.contains("\n") || 
+                              inputText.contains("\r") ||
+                              inputText.components(separatedBy: .whitespaces).count > 1
+        
+        if hasMultipleURLs {
+            // Parse and add multiple URLs
+            let result = whitelistManager.addURLs(from: inputText)
             newURL = ""
+            
+            if result.added > 0 {
+                if result.skipped > 0 {
+                    showAlert(
+                        title: "URLs Added",
+                        message: "Added \(result.added) URL(s). \(result.skipped) URL(s) were skipped (duplicates or invalid)."
+                    )
+                } else {
+                    // Don't show alert if all URLs were added successfully
+                }
+            } else {
+                showAlert(
+                    title: "No URLs Added",
+                    message: "All URLs were skipped (they may already be in the list or invalid)."
+                )
+            }
         } else {
-            showAlert(title: "Error", message: "Failed to add URL. It may already be in the list.")
+            // Single URL
+            if whitelistManager.addURL(inputText) {
+                newURL = ""
+            } else {
+                showAlert(title: "Error", message: "Failed to add URL. It may already be in the list.")
+            }
         }
     }
     
@@ -145,6 +219,45 @@ struct ContentView: View {
         guard whitelistManager.removeURL(at: index) else {
             showAlert(title: "Error", message: "Failed to remove URL.")
             return
+        }
+        // Update selection if needed
+        selectedURLs.remove(index)
+        // Adjust indices for items after the removed one
+        selectedURLs = Set(selectedURLs.compactMap { idx -> Int? in
+            if idx > index {
+                return idx - 1
+            } else if idx == index {
+                return nil
+            }
+            return idx
+        })
+    }
+    
+    private func selectAll() {
+        selectedURLs = Set(0..<whitelistManager.allowedURLs.count)
+    }
+    
+    private func deselectAll() {
+        selectedURLs.removeAll()
+    }
+    
+    private func toggleSelection(_ index: Int) {
+        if selectedURLs.contains(index) {
+            selectedURLs.remove(index)
+        } else {
+            selectedURLs.insert(index)
+        }
+    }
+    
+    private func deleteSelected() {
+        guard !selectedURLs.isEmpty else {
+            return
+        }
+        
+        if whitelistManager.removeURLs(at: selectedURLs) {
+            selectedURLs.removeAll()
+        } else {
+            showAlert(title: "Error", message: "Failed to remove some URLs.")
         }
     }
     

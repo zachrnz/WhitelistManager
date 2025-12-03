@@ -74,6 +74,34 @@ class WhitelistManager: ObservableObject {
         return saveWhitelist()
     }
     
+    /// Adds multiple URLs from a pasted string (handles newlines, commas, whitespace)
+    func addURLs(from text: String) -> (added: Int, skipped: Int) {
+        var addedCount = 0
+        var skippedCount = 0
+        
+        // Parse URLs from text - handle various separators
+        let separators = CharacterSet(charactersIn: ",\n\r\t")
+        let urlStrings = text.components(separatedBy: separators)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        
+        for urlString in urlStrings {
+            let normalizedURL = normalizeURL(urlString)
+            if !normalizedURL.isEmpty && !allowedURLs.contains(normalizedURL) {
+                allowedURLs.append(normalizedURL)
+                addedCount += 1
+            } else {
+                skippedCount += 1
+            }
+        }
+        
+        if addedCount > 0 {
+            _ = saveWhitelist()
+        }
+        
+        return (addedCount, skippedCount)
+    }
+    
     /// Removes a URL from the whitelist
     func removeURL(at index: Int) -> Bool {
         guard index >= 0 && index < allowedURLs.count else {
@@ -81,6 +109,20 @@ class WhitelistManager: ObservableObject {
         }
         
         allowedURLs.remove(at: index)
+        return saveWhitelist()
+    }
+    
+    /// Removes multiple URLs by their indices (indices must be sorted in descending order)
+    func removeURLs(at indices: Set<Int>) -> Bool {
+        let sortedIndices = indices.sorted(by: >) // Sort descending to remove from end first
+        
+        for index in sortedIndices {
+            guard index >= 0 && index < allowedURLs.count else {
+                continue
+            }
+            allowedURLs.remove(at: index)
+        }
+        
         return saveWhitelist()
     }
     
