@@ -73,7 +73,7 @@ class ProfileGenerator {
             "PayloadUUID": UUID().uuidString,
             "PayloadDisplayName": "Web Content Filter",
             "PayloadDescription": "Restricts Safari to allowed websites only",
-            "FilterType": "Whitelist",
+            "FilterType": "BuiltIn",
             "FilterBrowsers": [1], // Safari only (1 = Safari)
             "PermittedURLs": permittedURLs
         ]
