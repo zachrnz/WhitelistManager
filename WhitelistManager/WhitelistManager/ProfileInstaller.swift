@@ -111,7 +111,10 @@ class ProfileInstaller {
             flags: 0
         )
         
-        var authRights = AuthorizationRights(count: 1, items: &authItem)
+        var authRights: AuthorizationRights
+        withUnsafeMutablePointer(to: &authItem) { pointer in
+            authRights = AuthorizationRights(count: 1, items: pointer)
+        }
         let authFlags: AuthorizationFlags = [.interactionAllowed, .extendRights]
         
         let authStatus = AuthorizationCopyRights(auth, &authRights, nil, authFlags, nil)
@@ -146,7 +149,8 @@ class ProfileInstaller {
             let result = appleScript.executeAndReturnError(&error)
             
             if error == nil {
-                completion(true, result?.stringValue, nil)
+                let output = result.stringValue ?? ""
+                completion(true, output.isEmpty ? nil : output, nil)
             } else {
                 let errorMsg = error?[NSAppleScript.errorMessage] as? String ?? "Unknown error"
                 completion(false, nil, errorMsg)
