@@ -91,37 +91,12 @@ class ProfileInstaller {
             return
         }
         
-        // Use open command via AppleScript to trigger System Settings
-        // This is more reliable than NSWorkspace for .mobileconfig files
-        let script = """
-        tell application "System Events"
-            open POSIX file "\(profilePath)"
-        end tell
-        """
+        // Use NSWorkspace to open .mobileconfig files - macOS will handle them properly
+        // This will open System Settings automatically for profile installation
+        NSWorkspace.shared.open(fileURL)
         
-        if let appleScript = NSAppleScript(source: script) {
-            var error: NSDictionary?
-            appleScript.executeAndReturnError(&error)
-            
-            if error == nil {
-                // Also try NSWorkspace as backup
-                NSWorkspace.shared.open(fileURL)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    completion(true, "Please complete installation in System Settings")
-                }
-            } else {
-                // Fallback to NSWorkspace
-                NSWorkspace.shared.open(fileURL)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    completion(true, "Please complete installation in System Settings")
-                }
-            }
-        } else {
-            // Final fallback
-            NSWorkspace.shared.open(fileURL)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                completion(true, "Please complete installation in System Settings")
-            }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            completion(true, "Please complete installation in System Settings")
         }
     }
     
