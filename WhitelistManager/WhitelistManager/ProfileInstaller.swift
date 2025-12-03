@@ -172,39 +172,67 @@ class ProfileInstaller {
         let errorPipe = Pipe()
         
         // Build command with proper quoting for AppleScript
-        // Escape each argument properly
+        // Escape each argument properly - need to escape for AppleScript string
         let escapedArgs = arguments.map { arg -> String in
-            // Escape quotes and backslashes
+            // Escape backslashes first, then quotes
             let escaped = arg.replacingOccurrences(of: "\\", with: "\\\\")
                 .replacingOccurrences(of: "\"", with: "\\\"")
+                .replacingOccurrences(of: "$", with: "\\$")
             return "\"\(escaped)\""
         }
         let fullCommand = command + " " + escapedArgs.joined(separator: " ")
         
         // Use AppleScript with admin privileges as a more reliable method
         // This will prompt for admin password via GUI
+        // Use quoted form of to properly handle paths with spaces
         let script = """
+        do shell script quoted form of "\(command)" & " " & "\(escapedArgs.map { "quoted form of " + $0 }.joined(separator: " & \" \" & "))" with administrator privileges
+        """
+        
+        // Simpler approach - just quote the whole command properly
+        let simpleScript = """
         do shell script "\(fullCommand)" with administrator privileges
         """
         
-        if let appleScript = NSAppleScript(source: script) {
+        // Try the simpler script first
+        if let appleScript = NSAppleScript(source: simpleScript) {
             var error: NSDictionary?
             let result = appleScript.executeAndReturnError(&error)
             
             if error == nil {
                 let output = result.stringValue ?? ""
+                print("AppleScript execution succeeded")
                 completion(true, output.isEmpty ? nil : output, nil)
             } else {
                 let errorCode = error?[NSAppleScript.errorNumber] as? Int ?? -1
                 let errorMsg = error?[NSAppleScript.errorMessage] as? String ?? "Unknown error"
                 
+                print("AppleScript error \(errorCode): \(errorMsg)")
+                
                 // Error -128 means user cancelled the authentication dialog
                 if errorCode == -128 {
                     completion(false, nil, "Authentication cancelled by user")
-                } else {
-                    print("AppleScript error \(errorCode): \(errorMsg)")
-                    completion(false, nil, "Failed to execute with admin privileges: \(errorMsg)")
+                    return
                 }
+                
+                // Try the more complex script as fallback
+                if let complexScript = NSAppleScript(source: script) {
+                    var complexError: NSDictionary?
+                    let complexResult = complexScript.executeAndReturnError(&complexError)
+                    
+                    if complexError == nil {
+                        let output = complexResult.stringValue ?? ""
+                        print("Complex AppleScript execution succeeded")
+                        completion(true, output.isEmpty ? nil : output, nil)
+                        return
+                    } else {
+                        let complexErrorCode = complexError?[NSAppleScript.errorNumber] as? Int ?? -1
+                        let complexErrorMsg = complexError?[NSAppleScript.errorMessage] as? String ?? "Unknown error"
+                        print("Complex AppleScript also failed: \(complexErrorCode): \(complexErrorMsg)")
+                    }
+                }
+                
+                completion(false, nil, "Failed to execute with admin privileges: \(errorMsg)")
             }
         } else {
             // Fallback: try direct execution (may not work due to SIP)

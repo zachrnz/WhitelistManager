@@ -313,21 +313,25 @@ struct ContentView: View {
                 
                 if success {
                     if let error = error {
-                        // GUI installation fallback
+                        // GUI installation fallback - macOS will show its own notification
+                        // So we show a simpler message
                         showAlert(
                             title: "Profile Ready",
-                            message: "The profile has been saved to your \(saveLocation). Please double-click 'SchoolWhitelist.mobileconfig' to install it. You'll be prompted for your admin password."
+                            message: "The profile has been saved to your \(saveLocation). macOS should have opened System Settings automatically. If not, double-click the file to install it."
                         )
                     } else {
+                        // Direct installation succeeded!
                         showAlert(
                             title: "Success",
                             message: "Safari whitelist has been updated successfully!"
                         )
                     }
                 } else {
+                    // Installation failed - show where file was saved
+                    let errorMsg = error ?? "Failed to install profile automatically"
                     showAlert(
-                        title: "Installation Failed",
-                        message: error ?? "Failed to install profile. The profile has been saved to your Desktop. Please install it manually."
+                        title: "Installation Requires Manual Step",
+                        message: "\(errorMsg)\n\nThe profile has been saved to your \(saveLocation). Please open System Settings > Privacy & Security > Profiles to install it, or double-click the file."
                     )
                 }
             }
