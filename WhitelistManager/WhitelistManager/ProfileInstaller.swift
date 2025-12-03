@@ -41,11 +41,19 @@ class ProfileInstaller {
     
     /// Attempts direct installation using the profiles command with admin privileges
     private static func installProfileDirectly(at profilePath: String, completion: @escaping (Bool, String?) -> Void) {
+        // Verify file exists
+        guard FileManager.default.fileExists(atPath: profilePath) else {
+            print("Profile file does not exist at: \(profilePath)")
+            completion(false, "Profile file not found")
+            return
+        }
+        
         let command = "/usr/bin/profiles"
         // Modern syntax: profiles -I -F /path/to/profile.mobileconfig
         let arguments = ["-I", "-F", profilePath]
         
         print("Attempting to install profile at: \(profilePath)")
+        print("File exists: \(FileManager.default.fileExists(atPath: profilePath))")
         
         executePrivilegedCommand(command: command, arguments: arguments) { success, output, error in
             if success {
@@ -56,7 +64,9 @@ class ProfileInstaller {
                 let errorMsg = error ?? "Failed to install profile"
                 print("Direct installation failed: \(errorMsg)")
                 print("Output: \(output ?? "none")")
-                completion(false, errorMsg)
+                // Include output in error message for debugging
+                let fullError = output != nil && !output!.isEmpty ? "\(errorMsg)\nOutput: \(output!)" : errorMsg
+                completion(false, fullError)
             }
         }
     }
@@ -111,20 +121,23 @@ class ProfileInstaller {
         completion: @escaping (Bool, String?, String?) -> Void
     ) {
         // Use AppleScript's "quoted form of" for proper path handling
-        // This is the recommended way to handle paths with spaces/special characters
-        let escapedCommand = command.replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        
-        let escapedArgs = arguments.map { arg -> String in
-            let escaped = arg.replacingOccurrences(of: "\\", with: "\\\\")
-                .replacingOccurrences(of: "\"", with: "\\\"")
-            return "quoted form of \"\(escaped)\""
+        // Escape backslashes and quotes for AppleScript string literals
+        let escapeForAppleScript = { (str: String) -> String in
+            return str.replacingOccurrences(of: "\\", with: "\\\\")
+                     .replacingOccurrences(of: "\"", with: "\\\"")
         }
         
-        // Build AppleScript command using quoted form of for each argument
-        let argsString = escapedArgs.joined(separator: " & \" \" & ")
+        let escapedCommand = escapeForAppleScript(command)
+        let escapedArgs = arguments.map { escapeForAppleScript($0) }
+        
+        // Build AppleScript command using quoted form of for each part
+        let commandPart = "quoted form of \"\(escapedCommand)\""
+        let argsParts = escapedArgs.map { "quoted form of \"\($0)\"" }
+        let allParts = [commandPart] + argsParts
+        let commandString = allParts.joined(separator: " & \" \" & ")
+        
         let script = """
-        do shell script quoted form of "\(escapedCommand)" & " " & \(argsString) with administrator privileges
+        do shell script \(commandString) with administrator privileges
         """
         
         print("Executing AppleScript command:")
