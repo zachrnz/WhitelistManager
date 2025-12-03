@@ -1,0 +1,85 @@
+//
+//  ProfileGenerator.swift
+//  WhitelistManager
+//
+//  Generates .mobileconfig files for Safari web content filtering
+//
+
+import Foundation
+
+/// Generates macOS configuration profiles (.mobileconfig) for Safari web content filtering
+class ProfileGenerator {
+    static let profileIdentifier = "com.arendsee.WhitelistManager.SafariWhitelist"
+    static let profileDisplayName = "Safari School Whitelist"
+    static let profileOrganization = "WhitelistManager"
+    
+    /// Generates a .mobileconfig file from a list of allowed URLs
+    /// - Parameter allowedURLs: Array of domain names (e.g., ["google.com", "khanacademy.org"])
+    /// - Returns: Data representation of the .mobileconfig file, or nil on error
+    static func generateProfile(allowedURLs: [String]) -> Data? {
+        // Create the payload dictionary
+        // Format URLs properly - they should include protocol
+        let permittedURLs = allowedURLs.map { url -> String in
+            if url.hasPrefix("http://") || url.hasPrefix("https://") {
+                return url
+            }
+            // Default to https for security
+            return "https://\(url)"
+        }
+        
+        let payloadContent: [String: Any] = [
+            "PayloadType": "com.apple.webcontent-filter",
+            "PayloadVersion": 1,
+            "PayloadIdentifier": "\(profileIdentifier).payload",
+            "PayloadUUID": UUID().uuidString,
+            "PayloadDisplayName": "Web Content Filter",
+            "PayloadDescription": "Restricts Safari to allowed websites only",
+            "FilterType": "Whitelist",
+            "FilterBrowsers": [1], // Safari only (1 = Safari)
+            "WhitelistedBookmarks": [],
+            "PermittedURLs": permittedURLs
+        ]
+        
+        // Create the main payload
+        let payload: [String: Any] = [
+            "PayloadType": "Configuration",
+            "PayloadVersion": 1,
+            "PayloadIdentifier": profileIdentifier,
+            "PayloadUUID": UUID().uuidString,
+            "PayloadDisplayName": profileDisplayName,
+            "PayloadDescription": "Safari web content filter restricting access to school-approved websites",
+            "PayloadOrganization": profileOrganization,
+            "PayloadContent": [payloadContent]
+        ]
+        
+        // Convert to plist XML format
+        guard let plistData = try? PropertyListSerialization.data(
+            fromPropertyList: payload,
+            format: .xml,
+            options: 0
+        ) else {
+            return nil
+        }
+        
+        return plistData
+    }
+    
+    /// Saves the generated profile to a file
+    /// - Parameters:
+    ///   - profileData: The .mobileconfig data
+    ///   - filename: Optional filename (defaults to "SchoolWhitelist.mobileconfig")
+    /// - Returns: URL of the saved file, or nil on error
+    static func saveProfile(profileData: Data, filename: String = "SchoolWhitelist.mobileconfig") -> URL? {
+        let desktopURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first!
+        let fileURL = desktopURL.appendingPathComponent(filename)
+        
+        do {
+            try profileData.write(to: fileURL)
+            return fileURL
+        } catch {
+            print("Error saving profile: \(error)")
+            return nil
+        }
+    }
+}
+

@@ -1,0 +1,9 @@
+{
+  "allowed_urls": [
+    "google.com",
+    "classroom.google.com",
+    "khanacademy.org",
+    "youtube.com"
+  ]
+}
+
