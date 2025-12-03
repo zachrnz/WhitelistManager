@@ -95,37 +95,33 @@ class ProfileInstaller {
             return
         }
         
-        // Open the profile file (triggers macOS notification)
+        // Open the profile file first (this triggers macOS to show the profile)
         NSWorkspace.shared.open(fileURL)
         
-        // Try to open System Settings to Profiles section using AppleScript
-        // This doesn't require admin privileges, just opening an app
-        let script = """
-        tell application "System Settings"
-            activate
-            reveal anchor "Privacy_Profiles" of pane id "com.apple.preference.security"
-        end tell
-        """
-        
-        if let appleScript = NSAppleScript(source: script) {
-            var error: NSDictionary?
-            appleScript.executeAndReturnError(&error)
+        // Wait a moment for the file to be processed, then open System Settings
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            // Try using shell command to open System Settings with URL scheme
+            // This sometimes works better than NSWorkspace for URL schemes
+            let process = Process()
+            process.launchPath = "/usr/bin/open"
+            process.arguments = ["x-apple.systempreferences:com.apple.preference.security?Privacy_Profiles"]
             
-            if error != nil {
-                logger.debug("Failed to open System Settings via AppleScript, trying fallback")
+            do {
+                try process.run()
+                process.waitUntilExit()
+                if process.terminationStatus != 0 {
+                    // Fallback: try opening System Settings app directly
+                    self.logger.debug("URL scheme failed, opening System Settings app directly")
+                    if let settingsAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.SystemSettings") {
+                        NSWorkspace.shared.open(settingsAppURL)
+                    }
+                }
+            } catch {
                 // Fallback: just open System Settings app
+                self.logger.debug("Failed to use shell command, opening System Settings app directly")
                 if let settingsAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.SystemSettings") {
                     NSWorkspace.shared.open(settingsAppURL)
-                } else if let settingsAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.systempreferences") {
-                    NSWorkspace.shared.open(settingsAppURL)
                 }
-            }
-        } else {
-            // Fallback: just open System Settings app
-            if let settingsAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.SystemSettings") {
-                NSWorkspace.shared.open(settingsAppURL)
-            } else if let settingsAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.systempreferences") {
-                NSWorkspace.shared.open(settingsAppURL)
             }
         }
         
