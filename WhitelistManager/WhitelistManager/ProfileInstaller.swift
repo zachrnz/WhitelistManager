@@ -44,11 +44,17 @@ class ProfileInstaller {
         let command = "/usr/bin/profiles"
         let arguments = ["install", "-type", "configuration", "-path", profilePath]
         
+        print("Attempting to install profile at: \(profilePath)")
+        
         executePrivilegedCommand(command: command, arguments: arguments) { success, output, error in
             if success {
+                print("Profile installed successfully via profiles command")
                 completion(true, nil)
             } else {
-                completion(false, error ?? "Failed to install profile")
+                let errorMsg = error ?? "Failed to install profile"
+                print("Direct installation failed: \(errorMsg)")
+                print("Output: \(output ?? "none")")
+                completion(false, errorMsg)
             }
         }
     }
@@ -85,12 +91,37 @@ class ProfileInstaller {
             return
         }
         
-        // Open the file - macOS will prompt for installation
-        NSWorkspace.shared.open(fileURL)
+        // Use open command via AppleScript to trigger System Settings
+        // This is more reliable than NSWorkspace for .mobileconfig files
+        let script = """
+        tell application "System Events"
+            open POSIX file "\(profilePath)"
+        end tell
+        """
         
-        // Give user time to complete installation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            completion(true, "Please complete installation in System Settings")
+        if let appleScript = NSAppleScript(source: script) {
+            var error: NSDictionary?
+            appleScript.executeAndReturnError(&error)
+            
+            if error == nil {
+                // Also try NSWorkspace as backup
+                NSWorkspace.shared.open(fileURL)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    completion(true, "Please complete installation in System Settings")
+                }
+            } else {
+                // Fallback to NSWorkspace
+                NSWorkspace.shared.open(fileURL)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    completion(true, "Please complete installation in System Settings")
+                }
+            }
+        } else {
+            // Final fallback
+            NSWorkspace.shared.open(fileURL)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                completion(true, "Please complete installation in System Settings")
+            }
         }
     }
     
@@ -164,8 +195,16 @@ class ProfileInstaller {
                 let output = result.stringValue ?? ""
                 completion(true, output.isEmpty ? nil : output, nil)
             } else {
+                let errorCode = error?[NSAppleScript.errorNumber] as? Int ?? -1
                 let errorMsg = error?[NSAppleScript.errorMessage] as? String ?? "Unknown error"
-                completion(false, nil, errorMsg)
+                
+                // Error -128 means user cancelled the authentication dialog
+                if errorCode == -128 {
+                    completion(false, nil, "Authentication cancelled by user")
+                } else {
+                    print("AppleScript error \(errorCode): \(errorMsg)")
+                    completion(false, nil, "Failed to execute with admin privileges: \(errorMsg)")
+                }
             }
         } else {
             // Fallback: try direct execution (may not work due to SIP)
