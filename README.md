@@ -5,6 +5,8 @@ A macOS app that allows parents (or children with admin approval) to easily mana
 ## Features
 
 - **Simple GUI**: View, add, and remove URLs from the Safari whitelist
+- **Bulk URL Import**: Paste multiple URLs at once (supports commas, newlines, spaces as separators)
+- **Multi-Select Deletion**: Select multiple URLs with Cmd+click or Shift+click and delete them in bulk
 - **Automatic Profile Generation**: Creates `.mobileconfig` files with the updated whitelist
 - **Privileged Installation**: Handles profile installation with admin authentication
 - **Non-Admin Friendly**: Usable from child's account, prompts for admin password only when needed
@@ -71,14 +73,50 @@ Or use Xcode's `Product > Show Build Folder in Finder` option.
 
 ### Adding URLs
 
+#### Single URL
 1. Enter a domain name in the text field (e.g., `classroom.google.com`)
 2. Click "Add" or press Enter
 3. The URL will be normalized (protocol, www, and paths removed)
 
+#### Bulk Import (Multiple URLs)
+1. Paste multiple URLs into the text field, separated by:
+   - Commas (`,`)
+   - Newlines
+   - Spaces or tabs
+   
+   Example formats:
+   ```
+   google.com, classroom.google.com, khanacademy.org
+   ```
+   
+   or
+   ```
+   google.com
+   classroom.google.com
+   khanacademy.org
+   ```
+
+2. Click "Add" - the app will automatically parse and add all valid URLs
+3. You'll see a summary of how many URLs were added and how many were skipped (duplicates or invalid)
+4. All URLs are normalized automatically (protocol, www, and paths removed)
+
 ### Removing URLs
 
+#### Single URL
 1. Click the trash icon next to any URL in the list
 2. The URL is immediately removed from the whitelist
+
+#### Multiple URLs (Bulk Deletion)
+1. **Select individual URLs**: Click the checkbox next to each URL you want to delete
+2. **Select with keyboard shortcuts**:
+   - **Cmd+click**: Select multiple individual URLs
+   - **Shift+click**: Select a range of URLs (click first item, then Shift+click last item)
+3. **Select All**: Click the "Select All" button to select all URLs at once
+4. **Deselect**: Click "Deselect" to clear all selections
+5. **Delete Selected**: Click the "Delete Selected" button (shows count of selected items)
+6. All selected URLs will be removed at once
+
+**Note**: The checkboxes provide visual feedback for selected items. You can also use standard macOS list selection behavior (Cmd+click, Shift+click) for familiar multi-select interaction.
 
 ### Updating the Profile
 
