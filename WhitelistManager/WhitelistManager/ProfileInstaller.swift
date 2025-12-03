@@ -111,13 +111,13 @@ class ProfileInstaller {
             flags: 0
         )
         
-        var authRights: AuthorizationRights
-        withUnsafeMutablePointer(to: &authItem) { pointer in
-            authRights = AuthorizationRights(count: 1, items: pointer)
+        let authRights = withUnsafeMutablePointer(to: &authItem) { pointer in
+            AuthorizationRights(count: 1, items: pointer)
         }
         let authFlags: AuthorizationFlags = [.interactionAllowed, .extendRights]
         
-        let authStatus = AuthorizationCopyRights(auth, &authRights, nil, authFlags, nil)
+        var mutableAuthRights = authRights
+        let authStatus = AuthorizationCopyRights(auth, &mutableAuthRights, nil, authFlags, nil)
         
         guard authStatus == errAuthorizationSuccess else {
             completion(false, nil, "Authorization denied or cancelled")
