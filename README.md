@@ -130,13 +130,15 @@ Or use Xcode's `Product > Show Build Folder in Finder` option.
 
 **Important**: The profile is NOT automatically installed when you launch the app. You must click "Update Safari Whitelist" to install it.
 
+**Note on Admin Credentials**: Even if you're logged in as an admin user, macOS will still prompt for your password when installing/removing profiles. This is a security feature. However, macOS caches your authorization for approximately 5 minutes, so if you perform multiple operations within that window, you'll only be prompted once.
+
 ### Removing the Profile (For Testing)
 
 To undo the Safari restriction and remove the profile:
 
 #### Option 1: Using the App (Easiest)
 1. Click the "Remove Profile" button in the app
-2. Enter admin credentials when prompted
+2. Enter admin credentials when prompted (even if you're an admin user, macOS requires confirmation)
 3. The profile will be removed and Safari will no longer be restricted
 
 #### Option 2: Using Terminal
