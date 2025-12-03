@@ -15,29 +15,17 @@ class ProfileInstaller {
     static let profileIdentifier = ProfileGenerator.profileIdentifier
     private static let logger = Logger(subsystem: "com.arendsee.WhitelistManager", category: "ProfileInstaller")
     
-    /// Installs a configuration profile using admin privileges
+    /// Installs a configuration profile
+    /// Note: macOS no longer allows programmatic profile installation via the profiles command.
+    /// This opens the profile file, which macOS will handle via System Settings.
     /// - Parameters:
     ///   - profilePath: Path to the .mobileconfig file
     ///   - completion: Callback with success status and optional error message
     static func installProfile(at profilePath: String, completion: @escaping (Bool, String?) -> Void) {
-        // First, try to remove the old profile if it exists
-        removeExistingProfile { removed in
-            if removed {
-                print("Removed existing profile")
-            }
-            
-            // Attempt direct installation using profiles command with admin privileges
-            self.installProfileDirectly(at: profilePath) { success, error in
-                if success {
-                    completion(true, nil)
-                } else {
-                    // Fallback: open the file and let macOS handle installation
-                    self.installProfileViaGUI(at: profilePath) { guiSuccess, guiError in
-                        completion(guiSuccess, guiError)
-                    }
-                }
-            }
-        }
+        // macOS no longer supports programmatic profile installation
+        // We must use the GUI method (opening the file opens System Settings)
+        logger.info("Opening profile file - macOS will handle installation via System Settings")
+        installProfileViaGUI(at: profilePath, completion: completion)
     }
     
     /// Attempts direct installation using the profiles command with admin privileges
