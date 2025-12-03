@@ -31,3 +31,4 @@ echo ""
 echo "✓ All icons converted to PNG format!"
 echo "Updating Contents.json..."
 
+

@@ -31,3 +31,4 @@ echo ""
 echo "✓ All icon sizes generated successfully!"
 echo "The icons are ready to use in Xcode."
 
+

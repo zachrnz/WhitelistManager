@@ -70,16 +70,35 @@ class ProfileGenerator {
     ///   - filename: Optional filename (defaults to "SchoolWhitelist.mobileconfig")
     /// - Returns: URL of the saved file, or nil on error
     static func saveProfile(profileData: Data, filename: String = "SchoolWhitelist.mobileconfig") -> URL? {
-        let desktopURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first!
-        let fileURL = desktopURL.appendingPathComponent(filename)
+        // Try Desktop first, fall back to Downloads if Desktop access is denied
+        var fileURL: URL?
         
-        do {
-            try profileData.write(to: fileURL)
-            return fileURL
-        } catch {
-            print("Error saving profile: \(error)")
-            return nil
+        // Try Desktop
+        if let desktopURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first {
+            let desktopFileURL = desktopURL.appendingPathComponent(filename)
+            do {
+                try profileData.write(to: desktopFileURL, options: .atomic)
+                return desktopFileURL
+            } catch {
+                print("Failed to save to Desktop: \(error.localizedDescription)")
+                // Fall through to Downloads
+            }
         }
+        
+        // Fall back to Downloads folder (we have explicit permission for this)
+        if let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first {
+            let downloadsFileURL = downloadsURL.appendingPathComponent(filename)
+            do {
+                try profileData.write(to: downloadsFileURL, options: .atomic)
+                print("Saved profile to Downloads folder instead of Desktop")
+                return downloadsFileURL
+            } catch {
+                print("Error saving profile to Downloads: \(error.localizedDescription)")
+                return nil
+            }
+        }
+        
+        return nil
     }
 }
 

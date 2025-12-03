@@ -297,12 +297,14 @@ struct ContentView: View {
             return
         }
         
-        // Save the profile to Desktop
+        // Save the profile (tries Desktop, falls back to Downloads)
         guard let profileURL = ProfileGenerator.saveProfile(profileData: profileData) else {
             isUpdating = false
-            showAlert(title: "Error", message: "Failed to save configuration profile.")
+            showAlert(title: "Error", message: "Failed to save configuration profile. Please check that you have write permissions.")
             return
         }
+        
+        let saveLocation = profileURL.path.contains("Downloads") ? "Downloads folder" : "Desktop"
         
         // Install the profile
         ProfileInstaller.installProfile(at: profileURL.path) { success, error in
@@ -314,7 +316,7 @@ struct ContentView: View {
                         // GUI installation fallback
                         showAlert(
                             title: "Profile Ready",
-                            message: "The profile has been saved to your Desktop. Please double-click 'SchoolWhitelist.mobileconfig' to install it. You'll be prompted for your admin password."
+                            message: "The profile has been saved to your \(saveLocation). Please double-click 'SchoolWhitelist.mobileconfig' to install it. You'll be prompted for your admin password."
                         )
                     } else {
                         showAlert(

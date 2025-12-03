@@ -46,3 +46,4 @@ python3 generate_icon.py
 
 Use an online SVG to PNG converter (like cloudconvert.com) to generate all sizes, then place them in the AppIcon.appiconset folder.
 
+

@@ -125,3 +125,4 @@ After running the app:
 - The app is designed to work from non-admin accounts (child's account)
 - Safari must be configured to use "Allowed Websites Only" mode for the profile to take effect
 
+
