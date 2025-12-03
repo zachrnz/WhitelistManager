@@ -312,16 +312,22 @@ struct ContentView: View {
                 isUpdating = false
                 
                 if success {
-                    // macOS will show its own "Profile Downloaded" notification
-                    // and automatically open System Settings to the Profiles section
-                    // User just needs to click "Install" and enter admin password
-                    showAlert(
-                        title: "Profile Ready",
-                        message: "System Settings should have opened automatically. Click 'Install' in the Profiles section and enter your admin password to complete the installation."
-                    )
+                    if let error = error {
+                        // GUI installation fallback - macOS will show its own notification
+                        showAlert(
+                            title: "Profile Ready",
+                            message: "System Settings should have opened automatically. Click 'Install' in the Profiles section and enter your admin password to complete the installation."
+                        )
+                    } else {
+                        // Direct installation succeeded!
+                        showAlert(
+                            title: "Success",
+                            message: "Safari whitelist has been updated successfully!"
+                        )
+                    }
                 } else {
                     // Installation failed - show where file was saved
-                    let errorMsg = error ?? "Failed to open profile"
+                    let errorMsg = error ?? "Failed to install profile automatically"
                     showAlert(
                         title: "Installation Requires Manual Step",
                         message: "\(errorMsg)\n\nThe profile has been saved to your \(saveLocation). Please double-click the file to open System Settings, or go to System Settings > Privacy & Security > Profiles to install it."
