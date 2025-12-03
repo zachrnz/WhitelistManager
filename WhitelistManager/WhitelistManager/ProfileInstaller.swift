@@ -42,13 +42,15 @@ class ProfileInstaller {
     /// Attempts direct installation using the profiles command with admin privileges
     private static func installProfileDirectly(at profilePath: String, completion: @escaping (Bool, String?) -> Void) {
         let command = "/usr/bin/profiles"
-        let arguments = ["install", "-type", "configuration", "-path", profilePath]
+        // Modern syntax: profiles -I -F /path/to/profile.mobileconfig
+        let arguments = ["-I", "-F", profilePath]
         
         print("Attempting to install profile at: \(profilePath)")
         
         executePrivilegedCommand(command: command, arguments: arguments) { success, output, error in
             if success {
                 print("Profile installed successfully via profiles command")
+                print("Output: \(output ?? "none")")
                 completion(true, nil)
             } else {
                 let errorMsg = error ?? "Failed to install profile"
