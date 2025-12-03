@@ -55,8 +55,9 @@ class ProfileGenerator {
             return nil
         }
         
-        // Build payload content - only include WhitelistedBookmarks if we have bookmarks
-        var payloadContent: [String: Any] = [
+        // Build payload content
+        // Note: Do not include WhitelistedBookmarks if empty - some macOS versions reject empty arrays
+        let payloadContent: [String: Any] = [
             "PayloadType": "com.apple.webcontent-filter",
             "PayloadVersion": 1,
             "PayloadIdentifier": "\(profileIdentifier).payload",
@@ -67,10 +68,6 @@ class ProfileGenerator {
             "FilterBrowsers": [1], // Safari only (1 = Safari)
             "PermittedURLs": permittedURLs
         ]
-        
-        // Only include WhitelistedBookmarks if it's not empty (some systems may require this)
-        // For now, include it as empty array as it's a standard field
-        payloadContent["WhitelistedBookmarks"] = []
         
         // Create the main payload
         let payload: [String: Any] = [
