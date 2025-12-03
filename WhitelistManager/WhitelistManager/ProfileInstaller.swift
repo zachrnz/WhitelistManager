@@ -125,52 +125,14 @@ class ProfileInstaller {
         }
     }
     
-    /// Executes a command with admin privileges using Authorization Services
-    /// Note: On modern macOS, direct privileged execution is restricted.
-    /// This will attempt execution and fall back to GUI installation if needed.
+    /// Executes a command with admin privileges using AppleScript
+    /// Note: In a sandboxed app, Authorization Services won't work, so we use AppleScript
+    /// which will prompt for admin credentials via the system dialog.
     private static func executePrivilegedCommand(
         command: String,
         arguments: [String],
         completion: @escaping (Bool, String?, String?) -> Void
     ) {
-        // Create authorization reference
-        var authRef: AuthorizationRef?
-        let status = AuthorizationCreate(nil, nil, [], &authRef)
-        
-        guard status == errAuthorizationSuccess, let auth = authRef else {
-            completion(false, nil, "Failed to create authorization reference")
-            return
-        }
-        
-        defer {
-            AuthorizationFree(auth, [])
-        }
-        
-        // Request right to execute the command
-        var authItem = AuthorizationItem(
-            name: ("system.privilege.admin" as NSString).utf8String!,
-            valueLength: 0,
-            value: nil,
-            flags: 0
-        )
-        
-        let authRights = withUnsafeMutablePointer(to: &authItem) { pointer in
-            AuthorizationRights(count: 1, items: pointer)
-        }
-        let authFlags: AuthorizationFlags = [.interactionAllowed, .extendRights]
-        
-        var mutableAuthRights = authRights
-        let authStatus = AuthorizationCopyRights(auth, &mutableAuthRights, nil, authFlags, nil)
-        
-        guard authStatus == errAuthorizationSuccess else {
-            completion(false, nil, "Authorization denied or cancelled")
-            return
-        }
-        
-        // Set up pipes for fallback execution
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        
         // Build command with proper quoting for AppleScript
         // Escape each argument properly - need to escape for AppleScript string
         let escapedArgs = arguments.map { arg -> String in
@@ -182,20 +144,14 @@ class ProfileInstaller {
         }
         let fullCommand = command + " " + escapedArgs.joined(separator: " ")
         
-        // Use AppleScript with admin privileges as a more reliable method
-        // This will prompt for admin password via GUI
-        // Use quoted form of to properly handle paths with spaces
+        // Use AppleScript with admin privileges - this will prompt for admin password
+        // The AppleEvents entitlement allows us to execute AppleScript
         let script = """
-        do shell script quoted form of "\(command)" & " " & "\(escapedArgs.map { "quoted form of " + $0 }.joined(separator: " & \" \" & "))" with administrator privileges
-        """
-        
-        // Simpler approach - just quote the whole command properly
-        let simpleScript = """
         do shell script "\(fullCommand)" with administrator privileges
         """
         
-        // Try the simpler script first
-        if let appleScript = NSAppleScript(source: simpleScript) {
+        // Execute AppleScript - this will prompt for admin credentials
+        if let appleScript = NSAppleScript(source: script) {
             var error: NSDictionary?
             let result = appleScript.executeAndReturnError(&error)
             
@@ -212,51 +168,12 @@ class ProfileInstaller {
                 // Error -128 means user cancelled the authentication dialog
                 if errorCode == -128 {
                     completion(false, nil, "Authentication cancelled by user")
-                    return
+                } else {
+                    completion(false, nil, "Failed to execute with admin privileges: \(errorMsg)")
                 }
-                
-                // Try the more complex script as fallback
-                if let complexScript = NSAppleScript(source: script) {
-                    var complexError: NSDictionary?
-                    let complexResult = complexScript.executeAndReturnError(&complexError)
-                    
-                    if complexError == nil {
-                        let output = complexResult.stringValue ?? ""
-                        print("Complex AppleScript execution succeeded")
-                        completion(true, output.isEmpty ? nil : output, nil)
-                        return
-                    } else {
-                        let complexErrorCode = complexError?[NSAppleScript.errorNumber] as? Int ?? -1
-                        let complexErrorMsg = complexError?[NSAppleScript.errorMessage] as? String ?? "Unknown error"
-                        print("Complex AppleScript also failed: \(complexErrorCode): \(complexErrorMsg)")
-                    }
-                }
-                
-                completion(false, nil, "Failed to execute with admin privileges: \(errorMsg)")
             }
         } else {
-            // Fallback: try direct execution (may not work due to SIP)
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: command)
-            process.arguments = arguments
-            process.standardOutput = outputPipe
-            process.standardError = errorPipe
-            
-            do {
-                try process.run()
-                process.waitUntilExit()
-                
-                let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                
-                let success = process.terminationStatus == 0
-                let output = String(data: outputData, encoding: .utf8)
-                let error = String(data: errorData, encoding: .utf8)
-                
-                completion(success, output, error)
-            } catch {
-                completion(false, nil, "Failed to execute command: \(error.localizedDescription)")
-            }
+            completion(false, nil, "Failed to create AppleScript")
         }
     }
     

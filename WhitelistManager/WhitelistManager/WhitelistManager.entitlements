@@ -14,5 +14,9 @@
 	<array>
 		<string>com.apple.webcontent-filter</string>
 	</array>
+	<key>com.apple.security.temporary-exception.apple-events</key>
+	<array>
+		<string>com.apple.systemevents</string>
+	</array>
 </dict>
 </plist>
