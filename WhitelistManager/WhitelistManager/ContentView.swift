@@ -145,23 +145,44 @@ struct ContentView: View {
             
             Divider()
             
-            // Update Button
-            Button(action: updateWhitelist) {
-                HStack {
-                    if isUpdating {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                            .padding(.trailing, 4)
-                    } else {
-                        Image(systemName: "arrow.clockwise.circle.fill")
+            // Action Buttons
+            HStack(spacing: 12) {
+                // Remove Profile Button
+                Button(action: removeProfile) {
+                    HStack {
+                        if isUpdating {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .padding(.trailing, 4)
+                        } else {
+                            Image(systemName: "xmark.circle.fill")
+                        }
+                        Text(isUpdating ? "Removing..." : "Remove Profile")
                     }
-                    Text(isUpdating ? "Updating..." : "Update Safari Whitelist")
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity)
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .disabled(isUpdating)
+                
+                // Update Button
+                Button(action: updateWhitelist) {
+                    HStack {
+                        if isUpdating {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .padding(.trailing, 4)
+                        } else {
+                            Image(systemName: "arrow.clockwise.circle.fill")
+                        }
+                        Text(isUpdating ? "Updating..." : "Update Safari Whitelist")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(whitelistManager.allowedURLs.isEmpty || isUpdating)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(whitelistManager.allowedURLs.isEmpty || isUpdating)
             .padding(.horizontal)
             .padding(.bottom, 20)
         }
@@ -305,6 +326,28 @@ struct ContentView: View {
                     showAlert(
                         title: "Installation Failed",
                         message: error ?? "Failed to install profile. The profile has been saved to your Desktop. Please install it manually."
+                    )
+                }
+            }
+        }
+    }
+    
+    private func removeProfile() {
+        isUpdating = true
+        
+        ProfileInstaller.removeProfile { success, error in
+            DispatchQueue.main.async {
+                isUpdating = false
+                
+                if success {
+                    showAlert(
+                        title: "Profile Removed",
+                        message: "The Safari whitelist profile has been removed. Safari will no longer be restricted."
+                    )
+                } else {
+                    showAlert(
+                        title: "Removal Failed",
+                        message: error ?? "Failed to remove profile. It may not be installed. You can also remove it manually in System Settings > Privacy & Security > Profiles."
                     )
                 }
             }

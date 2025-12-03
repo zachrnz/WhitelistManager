@@ -55,12 +55,22 @@ class ProfileInstaller {
     
     /// Removes the existing profile if it's installed
     private static func removeExistingProfile(completion: @escaping (Bool) -> Void) {
+        removeProfile(completion: completion)
+    }
+    
+    /// Public method to remove the profile (for testing/undoing)
+    static func removeProfile(completion: @escaping (Bool, String?) -> Void) {
         let command = "/usr/bin/profiles"
         let arguments = ["remove", "-identifier", profileIdentifier]
         
         executePrivilegedCommand(command: command, arguments: arguments) { success, output, error in
-            // Don't treat removal failure as critical - profile might not exist
-            completion(success)
+            if success {
+                completion(true, nil)
+            } else {
+                // Profile might not exist, which is fine
+                let errorMsg = error ?? "Profile may not be installed"
+                completion(false, errorMsg)
+            }
         }
     }
     

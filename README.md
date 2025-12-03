@@ -128,6 +128,29 @@ Or use Xcode's `Product > Show Build Folder in Finder` option.
    - Install the new profile
    - If installation fails, the profile is saved to Desktop for manual installation
 
+**Important**: The profile is NOT automatically installed when you launch the app. You must click "Update Safari Whitelist" to install it.
+
+### Removing the Profile (For Testing)
+
+To undo the Safari restriction and remove the profile:
+
+#### Option 1: Using the App (Easiest)
+1. Click the "Remove Profile" button in the app
+2. Enter admin credentials when prompted
+3. The profile will be removed and Safari will no longer be restricted
+
+#### Option 2: Using Terminal
+```bash
+sudo profiles -R -identifier com.arendsee.WhitelistManager.SafariWhitelist
+```
+
+#### Option 3: Using System Settings
+1. Open **System Settings** (or System Preferences on older macOS)
+2. Go to **Privacy & Security** > **Profiles**
+3. Find "Safari School Whitelist" profile
+4. Click the **-** button to remove it
+5. Enter admin password when prompted
+
 ## File Locations
 
 - **Whitelist JSON**: `~/Library/Application Support/com.arendsee.WhitelistManager/whitelist.json`
