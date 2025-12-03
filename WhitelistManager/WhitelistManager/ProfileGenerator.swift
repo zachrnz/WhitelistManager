@@ -23,24 +23,31 @@ class ProfileGenerator {
         }
         
         // Create the payload dictionary
-        // PermittedURLs should be full URLs with protocol
-        // Ensure URLs have https:// protocol
+        // PermittedURLs should be domain names only (no protocol) on macOS Sequoia
         let permittedURLs = allowedURLs.compactMap { url -> String? in
             var cleanURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !cleanURL.isEmpty else { return nil }
             
-            // Remove protocol if present (we'll add https://)
+            // Remove protocol if present
             if cleanURL.hasPrefix("https://") {
                 cleanURL = String(cleanURL.dropFirst(8))
             } else if cleanURL.hasPrefix("http://") {
                 cleanURL = String(cleanURL.dropFirst(7))
             }
+            // Remove www. prefix if present
+            if cleanURL.hasPrefix("www.") {
+                cleanURL = String(cleanURL.dropFirst(4))
+            }
             // Remove trailing slash
             if cleanURL.hasSuffix("/") {
                 cleanURL = String(cleanURL.dropLast())
             }
-            // Add https:// protocol
-            return "https://\(cleanURL)"
+            // Remove any path components (everything after first /)
+            if let slashIndex = cleanURL.firstIndex(of: "/") {
+                cleanURL = String(cleanURL[..<slashIndex])
+            }
+            // Return just the domain name
+            return cleanURL.lowercased()
         }
         
         // Ensure we still have URLs after cleaning
@@ -48,7 +55,8 @@ class ProfileGenerator {
             return nil
         }
         
-        let payloadContent: [String: Any] = [
+        // Build payload content - only include WhitelistedBookmarks if we have bookmarks
+        var payloadContent: [String: Any] = [
             "PayloadType": "com.apple.webcontent-filter",
             "PayloadVersion": 1,
             "PayloadIdentifier": "\(profileIdentifier).payload",
@@ -57,9 +65,12 @@ class ProfileGenerator {
             "PayloadDescription": "Restricts Safari to allowed websites only",
             "FilterType": "Whitelist",
             "FilterBrowsers": [1], // Safari only (1 = Safari)
-            "WhitelistedBookmarks": [],
             "PermittedURLs": permittedURLs
         ]
+        
+        // Only include WhitelistedBookmarks if it's not empty (some systems may require this)
+        // For now, include it as empty array as it's a standard field
+        payloadContent["WhitelistedBookmarks"] = []
         
         // Create the main payload
         let payload: [String: Any] = [

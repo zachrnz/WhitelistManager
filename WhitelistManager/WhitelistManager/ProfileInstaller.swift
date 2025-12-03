@@ -22,10 +22,16 @@ class ProfileInstaller {
     ///   - profilePath: Path to the .mobileconfig file
     ///   - completion: Callback with success status and optional error message
     static func installProfile(at profilePath: String, completion: @escaping (Bool, String?) -> Void) {
-        // macOS no longer supports programmatic profile installation
-        // We must use the GUI method (opening the file opens System Settings)
-        logger.info("Opening profile file - macOS will handle installation via System Settings")
-        installProfileViaGUI(at: profilePath, completion: completion)
+        // Try to remove any existing profile first to avoid conflicts
+        removeExistingProfile { removed in
+            if removed {
+                logger.info("Removed existing profile before installation")
+            }
+            // macOS no longer supports programmatic profile installation
+            // We must use the GUI method (opening the file opens System Settings)
+            logger.info("Opening profile file - macOS will handle installation via System Settings")
+            installProfileViaGUI(at: profilePath, completion: completion)
+        }
     }
     
     /// Attempts direct installation using the profiles command with admin privileges
