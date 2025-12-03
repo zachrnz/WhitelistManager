@@ -86,7 +86,7 @@ class ProfileInstaller {
         }
     }
     
-    /// Fallback method: Opens the profile file, triggering macOS GUI installation
+    /// Opens the profile file and System Settings for installation
     private static func installProfileViaGUI(at profilePath: String, completion: @escaping (Bool, String?) -> Void) {
         let fileURL = URL(fileURLWithPath: profilePath)
         
@@ -95,12 +95,42 @@ class ProfileInstaller {
             return
         }
         
-        // Use NSWorkspace to open .mobileconfig files - macOS will handle them properly
-        // This will open System Settings automatically for profile installation
+        // Open the profile file (triggers macOS notification)
         NSWorkspace.shared.open(fileURL)
         
+        // Try to open System Settings to Profiles section using AppleScript
+        // This doesn't require admin privileges, just opening an app
+        let script = """
+        tell application "System Settings"
+            activate
+            reveal anchor "Privacy_Profiles" of pane id "com.apple.preference.security"
+        end tell
+        """
+        
+        if let appleScript = NSAppleScript(source: script) {
+            var error: NSDictionary?
+            appleScript.executeAndReturnError(&error)
+            
+            if error != nil {
+                logger.debug("Failed to open System Settings via AppleScript, trying fallback")
+                // Fallback: just open System Settings app
+                if let settingsAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.SystemSettings") {
+                    NSWorkspace.shared.open(settingsAppURL)
+                } else if let settingsAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.systempreferences") {
+                    NSWorkspace.shared.open(settingsAppURL)
+                }
+            }
+        } else {
+            // Fallback: just open System Settings app
+            if let settingsAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.SystemSettings") {
+                NSWorkspace.shared.open(settingsAppURL)
+            } else if let settingsAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.systempreferences") {
+                NSWorkspace.shared.open(settingsAppURL)
+            }
+        }
+        
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            completion(true, "Please complete installation in System Settings")
+            completion(true, "System Settings should have opened. Click 'Install' in the Profiles section.")
         }
     }
     
